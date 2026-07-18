@@ -64,13 +64,20 @@ nixclaw-bench compare \
   --baseline baseline.json \
   --candidate candidate.json \
   --output decision.json
+
+nixclawctl record-results EXPERIMENT_ID \
+  --baseline baseline.json \
+  --candidate candidate.json \
+  --decision decision.json
 ```
 
 `host-signals.json` follows `workloads/host-signals.example.json`. It records
 the health failure, restart, OOM, and NCCL error counts plus whether critical
 memory pressure occurred.
 
-The broker attaches both benchmark files and the decision to `ExperimentV1`.
+An operator attaches both benchmark files and the decision through the
+activator's Unix socket before confirmation. The activator verifies them
+against `experiment-results.schema.json` and the reviewed experiment identity.
 Afterward Hermes runs `nixclaw-agent experiments sync ID`; the local store
 promotes accepted evidence or records negative evidence.
 

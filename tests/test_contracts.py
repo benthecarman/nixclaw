@@ -72,3 +72,14 @@ def test_fixture_experiment_matches_canonical_schema() -> None:
         registry=registry,
     )
     validator.validate(accepted)
+    results_validator = validator_for(schemas["experiment-results.schema.json"])(
+        schemas["experiment-results.schema.json"],
+        registry=registry,
+    )
+    results_validator.validate(
+        {
+            "baselineBenchmark": accepted["baselineBenchmark"],
+            "candidateBenchmark": accepted["candidateBenchmark"],
+            "decision": accepted["decision"],
+        }
+    )
