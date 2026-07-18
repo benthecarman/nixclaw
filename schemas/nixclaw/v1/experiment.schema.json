@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nixclaw.dev/schemas/v1/experiment.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "state", "baseGeneration", "workloadId", "hypothesis", "profilePatch", "clientRequestId", "originalProfileHash", "findings", "createdAt", "updatedAt"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/uuid" },
+    "state": { "enum": ["submitted", "validating", "built", "awaitingApproval", "active", "measuring", "accepted", "rejected", "rolledBack", "failed"] },
+    "baseGeneration": { "type": "string" },
+    "workloadId": { "type": "string" },
+    "hypothesis": { "type": "string" },
+    "profilePatch": { "$ref": "common.schema.json#/$defs/profilePatch" },
+    "clientRequestId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "originalProfileHash": { "type": "string" },
+    "candidateProfileHash": { "type": ["string", "null"] },
+    "candidateGeneration": { "type": ["string", "null"] },
+    "findings": { "type": "array", "items": { "type": "object" } },
+    "baselineResult": { "type": ["object", "null"] },
+    "candidateResult": { "type": ["object", "null"] },
+    "decision": { "type": ["object", "null"] },
+    "rollbackReason": { "type": ["string", "null"] },
+    "createdAt": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "updatedAt": { "$ref": "common.schema.json#/$defs/timestamp" }
+  }
+}

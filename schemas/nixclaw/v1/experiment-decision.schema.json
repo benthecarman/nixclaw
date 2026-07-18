@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nixclaw.dev/schemas/v1/experiment-decision.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "accepted", "deltas", "gates"],
+  "properties": {
+    "schemaVersion": { "const": "1" },
+    "accepted": { "type": "boolean" },
+    "deltas": { "type": "object", "additionalProperties": { "type": ["number", "null"] } },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "passed", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "passed": { "type": "boolean" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}

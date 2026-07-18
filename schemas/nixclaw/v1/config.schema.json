@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nixclaw.dev/schemas/v1/config.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requestId", "data"],
+  "properties": {
+    "schemaVersion": { "const": "1" },
+    "requestId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseGeneration", "activeProfileName", "profileHash", "servedModel", "activeProfile", "workloadIds", "tunables"],
+      "properties": {
+        "baseGeneration": { "type": "string", "minLength": 1 },
+        "activeProfileName": { "type": "string", "minLength": 1 },
+        "profileHash": { "type": "string", "minLength": 1 },
+        "servedModel": { "type": "string", "minLength": 1 },
+        "activeProfile": { "type": "object" },
+        "workloadIds": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "tunables": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type"],
+            "properties": {
+              "type": { "enum": ["number", "integer", "boolean", "string"] },
+              "nullable": { "type": "boolean", "default": false },
+              "minimum": { "type": ["number", "null"] },
+              "maximum": { "type": ["number", "null"] },
+              "step": { "type": ["number", "null"] },
+              "values": { "type": ["array", "null"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nixclaw.dev/schemas/v1/benchmark-result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "environmentFingerprint", "workloadId", "servedModel", "generation", "profileHash", "warmupCount", "runCount", "samples", "summary", "correctness", "failures"],
+  "properties": {
+    "schemaVersion": { "const": "1" },
+    "environmentFingerprint": { "type": "string" },
+    "workloadId": { "type": "string" },
+    "servedModel": { "type": "string" },
+    "generation": { "type": "string" },
+    "profileHash": { "type": "string" },
+    "warmupCount": { "type": "integer", "minimum": 0 },
+    "runCount": { "type": "integer", "minimum": 1 },
+    "samples": { "type": "array", "items": { "type": "object" } },
+    "summary": { "type": "object" },
+    "correctness": { "type": "object" },
+    "failures": { "type": "array", "items": { "type": "object" } }
+  }
+}

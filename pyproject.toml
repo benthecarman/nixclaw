@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nixclaw"
+version = "0.1.0"
+description = "Contained recursive optimization for NixOS-hosted Hermes agents"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx>=0.28,<1",
+  "jsonschema>=4.24,<5",
+  "pydantic>=2.11,<3",
+  "typer>=0.16,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9",
+  "ruff>=0.12,<1",
+]
+
+[project.scripts]
+nixclaw-agent = "nixclaw.cli:app"
+nixclaw-fixture = "nixclaw.fixture:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nixclaw"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

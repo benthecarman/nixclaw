@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nixclaw.dev/schemas/v1/facts.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requestId", "data"],
+  "properties": {
+    "schemaVersion": { "const": "1" },
+    "requestId": { "$ref": "common.schema.json#/$defs/uuid" },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generation", "nixRevision", "architecture", "gpus", "resources", "cluster", "vllm"],
+      "properties": {
+        "generation": { "type": "string", "minLength": 1 },
+        "nixRevision": { "type": "string", "minLength": 1 },
+        "architecture": { "type": "string", "minLength": 1 },
+        "gpus": { "type": "array", "items": { "type": "object" } },
+        "resources": { "type": "object" },
+        "cluster": { "type": "array", "items": { "type": "object" } },
+        "vllm": { "type": "object" }
+      }
+    }
+  }
+}

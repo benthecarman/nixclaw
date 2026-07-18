@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nixclaw.dev/schemas/v1/create-experiment.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["baseGeneration", "workloadId", "hypothesis", "profilePatch", "clientRequestId"],
+  "properties": {
+    "baseGeneration": { "type": "string", "minLength": 1 },
+    "workloadId": { "type": "string", "minLength": 1 },
+    "hypothesis": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "profilePatch": { "$ref": "common.schema.json#/$defs/profilePatch" },
+    "clientRequestId": { "$ref": "common.schema.json#/$defs/uuid" }
+  }
+}
