@@ -47,40 +47,44 @@ class Envelope(ApiModel):
 
 
 class GpuFact(ApiModel):
-    index: int
     model: str
+    count: int
     compute_capability: str
-    memory_bytes: int | None = None
-
-
-class ResourceFacts(ApiModel):
-    cpu_count: int
     memory_bytes: int
-    swap_bytes: int
+
+
+class CpuFacts(ApiModel):
+    logical_cores: int
+
+
+class MemoryFacts(ApiModel):
+    total_bytes: int
 
 
 class ClusterNode(ApiModel):
-    node_id: str
+    id: str
     role: str
     rank: int
     healthy: bool
 
 
-class VllmFacts(ApiModel):
-    version: str
-    model: str
-    profile_hash: str
+class ServiceFact(ApiModel):
+    name: str
     healthy: bool
 
 
 class Facts(ApiModel):
     generation: str
-    nix_revision: str
+    nixos_revision: str
     architecture: str
-    gpus: list[GpuFact]
-    resources: ResourceFacts
-    cluster: list[ClusterNode]
-    vllm: VllmFacts
+    gpu: list[GpuFact]
+    cpu: CpuFacts
+    memory: MemoryFacts
+    cluster_nodes: list[ClusterNode]
+    vllm_version: str
+    served_model: str
+    active_profile_hash: str
+    services: list[ServiceFact]
 
 
 class TunableField(ApiModel):
@@ -130,17 +134,17 @@ class VllmProfilePatch(ApiModel):
 class Config(ApiModel):
     base_generation: str
     active_profile_name: str
-    profile_hash: str
+    active_profile_hash: str
     served_model: str
     active_profile: dict[str, Any]
     workload_ids: list[str]
-    tunables: dict[str, TunableField]
+    tunable_fields: dict[str, TunableField]
 
 
 class CreateExperimentRequest(ApiModel):
     base_generation: str
     workload_id: str
-    hypothesis: str = Field(min_length=1, max_length=1000)
+    hypothesis: str = Field(min_length=1, max_length=2000)
     profile_patch: VllmProfilePatch
     client_request_id: UUID
 
@@ -166,12 +170,6 @@ TERMINAL_EXPERIMENT_STATES = {
 }
 
 
-class ValidationFinding(ApiModel):
-    code: str
-    message: str
-    field: str | None = None
-
-
 class Experiment(ApiModel):
     id: UUID
     state: ExperimentState
@@ -179,21 +177,21 @@ class Experiment(ApiModel):
     workload_id: str
     hypothesis: str
     profile_patch: VllmProfilePatch
-    client_request_id: UUID
     original_profile_hash: str
     candidate_profile_hash: str | None = None
     candidate_generation: str | None = None
-    findings: list[ValidationFinding] = Field(default_factory=list)
-    baseline_result: dict[str, Any] | None = None
-    candidate_result: dict[str, Any] | None = None
+    validation_findings: list[str] = Field(default_factory=list)
+    baseline_benchmark: dict[str, Any] | None = None
+    candidate_benchmark: dict[str, Any] | None = None
     decision: dict[str, Any] | None = None
     rollback_reason: str | None = None
+    error: str | None = None
     created_at: datetime
     updated_at: datetime
 
 
 class ReviewedProposal(ApiModel):
     base_generation: str
-    summary: str = Field(min_length=1, max_length=1000)
-    diff: str = Field(min_length=1, max_length=131_072)
     client_request_id: UUID
+    summary: str = Field(min_length=1, max_length=2000)
+    patch: str = Field(min_length=1, max_length=65_536)

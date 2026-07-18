@@ -4,44 +4,34 @@
   "$defs": {
     "uuid": { "type": "string", "format": "uuid" },
     "timestamp": { "type": "string", "format": "date-time" },
-    "profilePatch": {
+    "response": {
       "type": "object",
-      "additionalProperties": false,
+      "required": ["schemaVersion", "requestId", "data"],
       "properties": {
-        "gpuMemoryUtilization": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
-        "maxModelLen": { "type": "integer", "minimum": 1 },
-        "maxNumSeqs": { "type": ["integer", "null"], "minimum": 1 },
-        "maxNumBatchedTokens": { "type": ["integer", "null"], "minimum": 1 },
-        "tensorParallelSize": { "type": "integer", "minimum": 1 },
-        "pipelineParallelSize": { "type": "integer", "minimum": 1 },
-        "enablePrefixCaching": { "type": "boolean" },
-        "enableChunkedPrefill": { "type": ["boolean", "null"] },
-        "enforceEager": { "type": "boolean" },
-        "kvCacheDtype": {
-          "type": ["string", "null"],
-          "enum": ["auto", "fp8", "fp8_e4m3", "fp8_e5m2", null]
-        }
+        "schemaVersion": { "const": "1" },
+        "requestId": { "$ref": "#/$defs/uuid" },
+        "data": {}
       },
-      "minProperties": 1
+      "additionalProperties": false
     },
     "error": {
       "type": "object",
-      "additionalProperties": false,
       "required": ["schemaVersion", "requestId", "error"],
       "properties": {
         "schemaVersion": { "const": "1" },
         "requestId": { "$ref": "#/$defs/uuid" },
         "error": {
           "type": "object",
-          "additionalProperties": false,
           "required": ["code", "message", "details"],
           "properties": {
-            "code": { "type": "string", "minLength": 1 },
-            "message": { "type": "string", "minLength": 1 },
+            "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+            "message": { "type": "string" },
             "details": { "type": "object" }
-          }
+          },
+          "additionalProperties": false
         }
-      }
+      },
+      "additionalProperties": false
     }
   }
 }

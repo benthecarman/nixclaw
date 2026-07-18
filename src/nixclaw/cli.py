@@ -67,7 +67,7 @@ def config() -> None:
 
 
 @app.command()
-def optimize(workload: str = "agent-tool") -> None:
+def optimize(workload: str = "agent-tools") -> None:
     """Submit the best untried bounded experiment for a workload."""
 
     try:
@@ -124,7 +124,7 @@ def experiments_sync(experiment_id: UUID) -> None:
 
 
 @lessons_app.command("search")
-def lessons_search(workload: str = "agent-tool", include_rejected: bool = False) -> None:
+def lessons_search(workload: str = "agent-tools", include_rejected: bool = False) -> None:
     """Retrieve compatible validated lessons for the current environment."""
 
     try:

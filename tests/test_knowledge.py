@@ -21,12 +21,12 @@ def test_optimizer_persists_and_retrieves_lesson(tmp_path) -> None:
         BrokerClient("http://fixture", transport=fixture.transport()) as broker,
         KnowledgeStore(tmp_path / "knowledge.sqlite3") as store,
     ):
-        experiment, candidate = Optimizer(broker, store).propose("agent-tool")
+        experiment, candidate = Optimizer(broker, store).propose("agent-tools")
         assert candidate.patch.enable_prefix_caching is True
         fixture.advance(experiment.id, ExperimentState.ACCEPTED)
         Optimizer(broker, store).sync(experiment.id)
-        environment = environment_document(broker.facts(), broker.config(), "agent-tool")
-        lessons = store.search_lessons(environment, "agent-tool")
+        environment = environment_document(broker.facts(), broker.config(), "agent-tools")
+        lessons = store.search_lessons(environment, "agent-tools")
     assert lessons[0].repair == {"enablePrefixCaching": True}
     assert lessons[0].compatibility == "exact"
 
@@ -37,11 +37,11 @@ def test_attempted_candidate_is_not_retried(tmp_path) -> None:
         BrokerClient("http://fixture", transport=fixture.transport()) as broker,
         KnowledgeStore(tmp_path / "knowledge.sqlite3") as store,
     ):
-        experiment, _ = Optimizer(broker, store).propose("agent-tool")
+        experiment, _ = Optimizer(broker, store).propose("agent-tools")
         fixture.advance(experiment.id, ExperimentState.REJECTED)
         Optimizer(broker, store).sync(experiment.id)
         facts = broker.facts()
         config = broker.config()
-        candidates = CandidateGenerator().generate(facts, config, "agent-tool", store)
+        candidates = CandidateGenerator().generate(facts, config, "agent-tools", store)
     assert candidates
     assert candidates[0].patch.enable_prefix_caching is not True

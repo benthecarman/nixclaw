@@ -43,53 +43,42 @@ class RequestSample(ApiModel):
     error: str | None = None
 
 
-class BenchmarkSummary(ApiModel):
-    requests_attempted: int
-    requests_succeeded: int
-    input_tokens: int
-    output_tokens: int
-    median_throughput_tokens_per_second: float
-    p95_ttft_ms: float | None
-    p95_inter_token_latency_ms: float | None
-    peak_memory_ratio: float | None = None
-
-
-class Correctness(ApiModel):
-    health: bool
-    models: bool
-    generation: bool
-    structured_output: bool
-    tool_call: bool
-
-    @property
-    def passed(self) -> bool:
-        return all(self.model_dump().values())
-
-
-class FailureSignal(ApiModel):
-    code: str
-    message: str
-    critical: bool = True
-
-
 class HostSignals(ApiModel):
-    peak_memory_ratio: float | None = Field(default=None, ge=0, le=1)
-    failures: list[FailureSignal] = Field(default_factory=list)
+    health_failures: int = Field(default=0, ge=0)
+    restarts: int = Field(default=0, ge=0)
+    ooms: int = Field(default=0, ge=0)
+    nccl_errors: int = Field(default=0, ge=0)
+    critical_memory_pressure: bool = False
+
+
+class MetricDistribution(ApiModel):
+    median: float = Field(ge=0)
+    p95: float = Field(ge=0)
 
 
 class BenchmarkResult(ApiModel):
-    schema_version: str = "1"
     environment_fingerprint: str
     workload_id: str
     served_model: str
     generation: str
     profile_hash: str
     warmup_count: int
-    run_count: int
+    measured_run_count: int
     samples: list[RequestSample]
-    summary: BenchmarkSummary
-    correctness: Correctness
-    failures: list[FailureSignal] = Field(default_factory=list)
+    requests_attempted: int = Field(ge=0)
+    requests_succeeded: int = Field(ge=0)
+    input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    output_tokens_per_second: MetricDistribution
+    ttft_ms: MetricDistribution
+    inter_token_latency_ms: MetricDistribution
+    structured_output_correct: bool
+    tool_call_correct: bool
+    health_failures: int = Field(ge=0)
+    restarts: int = Field(ge=0)
+    ooms: int = Field(ge=0)
+    nccl_errors: int = Field(ge=0)
+    critical_memory_pressure: bool
 
 
 class DecisionGate(ApiModel):
@@ -99,10 +88,13 @@ class DecisionGate(ApiModel):
 
 
 class ExperimentDecision(ApiModel):
-    schema_version: str = "1"
     accepted: bool
-    deltas: dict[str, float | None]
-    gates: list[DecisionGate]
+    baseline: dict[str, Any]
+    candidate: dict[str, Any]
+    percentage_deltas: dict[str, float]
+    passed_gates: list[str]
+    failed_gates: list[str]
+    explanations: list[str]
 
 
 def percentile(values: list[float], percentile_value: float) -> float | None:
@@ -125,19 +117,26 @@ def compare_results(baseline: BenchmarkResult, candidate: BenchmarkResult) -> Ex
     """Apply the immutable NixClaw experiment acceptance policy."""
 
     throughput_delta = percent_change(
-        candidate.summary.median_throughput_tokens_per_second,
-        baseline.summary.median_throughput_tokens_per_second,
+        candidate.output_tokens_per_second.median,
+        baseline.output_tokens_per_second.median,
     )
-    ttft_delta = percent_change(candidate.summary.p95_ttft_ms, baseline.summary.p95_ttft_ms)
+    ttft_delta = percent_change(candidate.ttft_ms.p95, baseline.ttft_ms.p95)
     itl_delta = percent_change(
-        candidate.summary.p95_inter_token_latency_ms,
-        baseline.summary.p95_inter_token_latency_ms,
+        candidate.inter_token_latency_ms.p95,
+        baseline.inter_token_latency_ms.p95,
     )
-    no_failures = not any(failure.critical for failure in candidate.failures)
+    no_failures = (
+        candidate.health_failures == 0
+        and candidate.restarts == 0
+        and candidate.ooms == 0
+        and candidate.nccl_errors == 0
+        and not candidate.critical_memory_pressure
+    )
     all_requests = (
-        candidate.summary.requests_attempted > 0
-        and candidate.summary.requests_succeeded == candidate.summary.requests_attempted
+        candidate.requests_attempted > 0
+        and candidate.requests_succeeded == candidate.requests_attempted
     )
+    correctness = candidate.structured_output_correct and candidate.tool_call_correct
     gates = [
         DecisionGate(
             code="throughput_improvement",
@@ -152,16 +151,16 @@ def compare_results(baseline: BenchmarkResult, candidate: BenchmarkResult) -> Ex
             code="request_success",
             passed=all_requests,
             message=(
-                f"{candidate.summary.requests_succeeded}/"
-                f"{candidate.summary.requests_attempted} requests succeeded"
+                f"{candidate.requests_succeeded}/"
+                f"{candidate.requests_attempted} requests succeeded"
             ),
         ),
         DecisionGate(
             code="correctness",
-            passed=candidate.correctness.passed,
+            passed=correctness,
             message=(
                 "All correctness probes passed"
-                if candidate.correctness.passed
+                if correctness
                 else "A correctness probe failed"
             ),
         ),
@@ -193,14 +192,31 @@ def compare_results(baseline: BenchmarkResult, candidate: BenchmarkResult) -> Ex
             ),
         ),
     ]
+    deltas = {
+        name: value
+        for name, value in {
+            "outputTokensPerSecond": throughput_delta,
+            "ttftMs": ttft_delta,
+            "interTokenLatencyMs": itl_delta,
+        }.items()
+        if value is not None
+    }
     return ExperimentDecision(
         accepted=all(gate.passed for gate in gates),
-        deltas={
-            "throughputPercent": throughput_delta,
-            "p95TtftPercent": ttft_delta,
-            "p95InterTokenPercent": itl_delta,
+        baseline={
+            "outputTokensPerSecond": baseline.output_tokens_per_second.median,
+            "ttftMs": baseline.ttft_ms.p95,
+            "interTokenLatencyMs": baseline.inter_token_latency_ms.p95,
         },
-        gates=gates,
+        candidate={
+            "outputTokensPerSecond": candidate.output_tokens_per_second.median,
+            "ttftMs": candidate.ttft_ms.p95,
+            "interTokenLatencyMs": candidate.inter_token_latency_ms.p95,
+        },
+        percentage_deltas=deltas,
+        passed_gates=[gate.code for gate in gates if gate.passed],
+        failed_gates=[gate.code for gate in gates if not gate.passed],
+        explanations=[gate.message for gate in gates],
     )
 
 
@@ -243,8 +259,7 @@ class BenchmarkRunner:
         profile_hash: str,
         warmup_count: int = 1,
         run_count: int = 3,
-        external_failures: list[FailureSignal] | None = None,
-        peak_memory_ratio: float | None = None,
+        host_signals: HostSignals | None = None,
     ) -> BenchmarkResult:
         health, models = await self._qualification()
         for warmup in range(warmup_count):
@@ -263,29 +278,9 @@ class BenchmarkRunner:
         tool_call = await self._tool_probe() if workload.require_tool_call else True
         ttfts = [sample.ttft_ms for sample in samples if sample.ttft_ms is not None]
         itls = [latency for sample in samples for latency in sample.inter_token_latencies_ms]
-        summary = BenchmarkSummary(
-            requests_attempted=len(samples),
-            requests_succeeded=sum(sample.success for sample in samples),
-            input_tokens=sum(sample.input_tokens for sample in samples),
-            output_tokens=sum(sample.output_tokens for sample in samples),
-            median_throughput_tokens_per_second=median(throughputs) if throughputs else 0,
-            p95_ttft_ms=percentile(ttfts, 0.95),
-            p95_inter_token_latency_ms=percentile(itls, 0.95),
-            peak_memory_ratio=peak_memory_ratio,
-        )
-        correctness = Correctness(
-            health=health,
-            models=models,
-            generation=bool(samples) and all(sample.success for sample in samples),
-            structured_output=structured,
-            tool_call=tool_call,
-        )
-        failures = list(external_failures or [])
-        failures.extend(
-            FailureSignal(code="request_failure", message=sample.error or "Request failed")
-            for sample in samples
-            if not sample.success
-        )
+        signals = host_signals or HostSignals()
+        request_failures = sum(not sample.success for sample in samples)
+        qualification_failures = int(not health) + int(not models)
         return BenchmarkResult(
             environment_fingerprint=environment_fingerprint,
             workload_id=workload.id,
@@ -293,11 +288,33 @@ class BenchmarkRunner:
             generation=generation,
             profile_hash=profile_hash,
             warmup_count=warmup_count,
-            run_count=run_count,
+            measured_run_count=run_count,
             samples=samples,
-            summary=summary,
-            correctness=correctness,
-            failures=failures,
+            requests_attempted=len(samples),
+            requests_succeeded=sum(sample.success for sample in samples),
+            input_tokens=sum(sample.input_tokens for sample in samples),
+            output_tokens=sum(sample.output_tokens for sample in samples),
+            output_tokens_per_second=MetricDistribution(
+                median=median(throughputs) if throughputs else 0,
+                p95=percentile(throughputs, 0.95) or 0,
+            ),
+            ttft_ms=MetricDistribution(
+                median=median(ttfts) if ttfts else 0,
+                p95=percentile(ttfts, 0.95) or 0,
+            ),
+            inter_token_latency_ms=MetricDistribution(
+                median=median(itls) if itls else 0,
+                p95=percentile(itls, 0.95) or 0,
+            ),
+            structured_output_correct=structured,
+            tool_call_correct=tool_call,
+            health_failures=signals.health_failures
+            + request_failures
+            + qualification_failures,
+            restarts=signals.restarts,
+            ooms=signals.ooms,
+            nccl_errors=signals.nccl_errors,
+            critical_memory_pressure=signals.critical_memory_pressure,
         )
 
     async def _qualification(self) -> tuple[bool, bool]:
@@ -509,8 +526,7 @@ def run_command(
                 profile_hash=profile_hash,
                 warmup_count=warmup_count,
                 run_count=run_count,
-                external_failures=signals.failures,
-                peak_memory_ratio=signals.peak_memory_ratio,
+                host_signals=signals,
             )
         finally:
             await runner.close()

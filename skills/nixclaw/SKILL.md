@@ -35,12 +35,12 @@ OpenShell and the broker enforce the actual authority.
 ## Procedure
 
 1. Run `nixclaw-agent facts` and `nixclaw-agent config`.
-2. Run `nixclaw-agent lessons search --workload agent-tool` before proposing a
+2. Run `nixclaw-agent lessons search --workload agent-tools` before proposing a
    change. Exact lessons are directly relevant; transfer lessons require a new
    experiment.
 3. State one measurable hypothesis and preserve the current generation as the
    base.
-4. Run `nixclaw-agent optimize --workload agent-tool`. The optimizer selects
+4. Run `nixclaw-agent optimize --workload agent-tools`. The optimizer selects
    one legal, untried patch and submits it idempotently.
 5. Report the experiment ID and stop at `awaitingApproval`. Only the host
    operator can review or activate it.

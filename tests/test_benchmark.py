@@ -6,9 +6,7 @@ import httpx
 from nixclaw.benchmark import (
     BenchmarkResult,
     BenchmarkRunner,
-    BenchmarkSummary,
-    Correctness,
-    FailureSignal,
+    MetricDistribution,
     WorkloadManifest,
     compare_results,
     percentile,
@@ -21,34 +19,31 @@ def result(
     itl: float = 10,
     *,
     correctness: bool = True,
-    failures: list[FailureSignal] | None = None,
+    runtime_failure: bool = False,
 ) -> BenchmarkResult:
     return BenchmarkResult(
         environment_fingerprint="sha256:test",
-        workload_id="agent-tool",
+        workload_id="agent-tools",
         served_model="test-model",
         generation="generation",
         profile_hash="profile",
         warmup_count=1,
-        run_count=3,
+        measured_run_count=3,
         samples=[],
-        summary=BenchmarkSummary(
-            requests_attempted=12,
-            requests_succeeded=12,
-            input_tokens=96_000,
-            output_tokens=6_144,
-            median_throughput_tokens_per_second=throughput,
-            p95_ttft_ms=ttft,
-            p95_inter_token_latency_ms=itl,
-        ),
-        correctness=Correctness(
-            health=correctness,
-            models=correctness,
-            generation=correctness,
-            structured_output=correctness,
-            tool_call=correctness,
-        ),
-        failures=failures or [],
+        requests_attempted=12,
+        requests_succeeded=12,
+        input_tokens=96_000,
+        output_tokens=6_144,
+        output_tokens_per_second=MetricDistribution(median=throughput, p95=throughput),
+        ttft_ms=MetricDistribution(median=ttft, p95=ttft),
+        inter_token_latency_ms=MetricDistribution(median=itl, p95=itl),
+        structured_output_correct=correctness,
+        tool_call_correct=correctness,
+        health_failures=0,
+        restarts=0,
+        ooms=int(runtime_failure),
+        nccl_errors=0,
+        critical_memory_pressure=False,
     )
 
 
@@ -60,16 +55,16 @@ def test_nearest_rank_percentile() -> None:
 def test_accepts_improvement_within_all_gates() -> None:
     decision = compare_results(result(100), result(104, ttft=109, itl=10.9))
     assert decision.accepted
-    assert all(gate.passed for gate in decision.gates)
+    assert not decision.failed_gates
 
 
 def test_rejects_runtime_failure() -> None:
     decision = compare_results(
         result(100),
-        result(110, failures=[FailureSignal(code="oom", message="GPU OOM")]),
+        result(110, runtime_failure=True),
     )
     assert not decision.accepted
-    assert not next(gate for gate in decision.gates if gate.code == "runtime_health").passed
+    assert "runtime_health" in decision.failed_gates
 
 
 def test_runner_exercises_stream_and_correctness() -> None:
@@ -138,6 +133,8 @@ def test_runner_exercises_stream_and_correctness() -> None:
             await runner.close()
 
     measured = asyncio.run(exercise())
-    assert measured.correctness.passed
-    assert measured.summary.requests_succeeded == 1
-    assert measured.summary.output_tokens == 2
+    assert measured.structured_output_correct
+    assert measured.tool_call_correct
+    assert measured.health_failures == 0
+    assert measured.requests_succeeded == 1
+    assert measured.output_tokens == 2

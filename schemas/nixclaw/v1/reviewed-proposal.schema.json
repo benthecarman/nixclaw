@@ -1,13 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nixclaw.dev/schemas/v1/reviewed-proposal.schema.json",
+  "title": "ReviewedProposalV1",
   "type": "object",
-  "additionalProperties": false,
-  "required": ["baseGeneration", "summary", "diff", "clientRequestId"],
+  "required": ["baseGeneration", "clientRequestId", "summary", "patch"],
   "properties": {
     "baseGeneration": { "type": "string", "minLength": 1 },
-    "summary": { "type": "string", "minLength": 1, "maxLength": 1000 },
-    "diff": { "type": "string", "minLength": 1, "maxLength": 131072 },
-    "clientRequestId": { "$ref": "common.schema.json#/$defs/uuid" }
-  }
+    "clientRequestId": { "type": "string", "format": "uuid" },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "patch": { "type": "string", "minLength": 1, "maxLength": 65536 }
+  },
+  "additionalProperties": false
 }

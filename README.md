@@ -29,7 +29,7 @@ Point the client at it and exercise the recursive loop:
 ```console
 export NIXCLAW_BROKER_URL=http://127.0.0.1:8765
 uv run nixclaw-agent facts
-uv run nixclaw-agent optimize --workload agent-tool
+uv run nixclaw-agent optimize --workload agent-tools
 ```
 
 The optimizer stops at host approval. Once an experiment reaches a terminal

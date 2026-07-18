@@ -27,15 +27,16 @@ def build_scorecard(facts: Facts, config: Config, store: KnowledgeStore) -> dict
         "generatedAt": datetime.now(UTC).isoformat(),
         "environment": {
             "generation": facts.generation,
-            "nixRevision": facts.nix_revision,
+            "nixRevision": facts.nixos_revision,
             "architecture": facts.architecture,
-            "gpus": [gpu.model for gpu in facts.gpus],
-            "clusterNodes": len(facts.cluster),
-            "vllmVersion": facts.vllm.version,
+            "gpus": [gpu.model for gpu in facts.gpu],
+            "clusterNodes": len(facts.cluster_nodes),
+            "vllmVersion": facts.vllm_version,
             "servedModel": config.served_model,
             "profileName": config.active_profile_name,
-            "profileHash": config.profile_hash,
-            "healthy": facts.vllm.healthy and all(node.healthy for node in facts.cluster),
+            "profileHash": config.active_profile_hash,
+            "healthy": all(service.healthy for service in facts.services)
+            and all(node.healthy for node in facts.cluster_nodes),
         },
         **evidence,
     }
@@ -49,8 +50,8 @@ def render_scorecard(scorecard: dict[str, Any]) -> str:
     def escape(value: object) -> str:
         return html.escape(str(value))
 
-    def metric(summary: dict[str, Any], name: str, suffix: str) -> str:
-        value = summary.get(name)
+    def metric(result: dict[str, Any], name: str, statistic: str, suffix: str) -> str:
+        value = result.get(name, {}).get(statistic)
         return "Unavailable" if value is None else f"{float(value):.2f}{suffix}"
 
     health_class = "good" if environment["healthy"] else "bad"
@@ -63,8 +64,8 @@ def render_scorecard(scorecard: dict[str, Any]) -> str:
         None,
     )
     if latest_measured:
-        baseline_summary = latest_measured["metrics"]["baseline"].get("summary", {})
-        candidate_summary = latest_measured["metrics"]["candidate"].get("summary", {})
+        baseline_summary = latest_measured["metrics"]["baseline"]
+        candidate_summary = latest_measured["metrics"]["candidate"]
         decision = latest_measured["metrics"].get("decision", {})
     else:
         baseline_summary = {}
@@ -72,23 +73,28 @@ def render_scorecard(scorecard: dict[str, Any]) -> str:
         decision = {}
     metric_cards = "".join(
         f"<div class='card'>{escape(label)}"
-        f"<span class='value'>{escape(metric(baseline_summary, name, suffix))} → "
-        f"{escape(metric(candidate_summary, name, suffix))}</span></div>"
-        for label, name, suffix in (
-            ("Throughput", "medianThroughputTokensPerSecond", " tok/s"),
-            ("p95 TTFT", "p95TtftMs", " ms"),
-            ("p95 inter-token", "p95InterTokenLatencyMs", " ms"),
-            ("Peak memory", "peakMemoryRatio", ""),
+        f"<span class='value'>{escape(metric(baseline_summary, name, statistic, suffix))} → "
+        f"{escape(metric(candidate_summary, name, statistic, suffix))}</span></div>"
+        for label, name, statistic, suffix in (
+            ("Throughput", "outputTokensPerSecond", "median", " tok/s"),
+            ("p95 TTFT", "ttftMs", "p95", " ms"),
+            ("p95 inter-token", "interTokenLatencyMs", "p95", " ms"),
         )
     )
+    gates = [
+        (code, True) for code in decision.get("passedGates", [])
+    ] + [
+        (code, False) for code in decision.get("failedGates", [])
+    ]
+    explanations = decision.get("explanations", [])
     gate_rows = "".join(
         "<tr>"
-        f"<td><code>{escape(gate.get('code', 'unknown'))}</code></td>"
-        f"<td class='{'good' if gate.get('passed') else 'bad'}'>"
-        f"{'pass' if gate.get('passed') else 'fail'}</td>"
-        f"<td>{escape(gate.get('message', ''))}</td>"
+        f"<td><code>{escape(code)}</code></td>"
+        f"<td class='{'good' if passed else 'bad'}'>"
+        f"{'pass' if passed else 'fail'}</td>"
+        f"<td>{escape(explanations[index] if index < len(explanations) else '')}</td>"
         "</tr>"
-        for gate in decision.get("gates", [])
+        for index, (code, passed) in enumerate(gates)
     ) or "<tr><td colspan='3' class='empty'>No measured decision recorded</td></tr>"
     experiment_rows = "".join(
         "<tr>"

@@ -12,7 +12,7 @@ def test_end_to_end_scorecard_contains_validated_lesson(tmp_path) -> None:
         BrokerClient("http://fixture", transport=fixture.transport()) as broker,
         KnowledgeStore(tmp_path / "knowledge.sqlite3") as store,
     ):
-        experiment, _ = Optimizer(broker, store).propose("agent-tool")
+        experiment, _ = Optimizer(broker, store).propose("agent-tools")
         fixture.advance(experiment.id, ExperimentState.ACCEPTED)
         Optimizer(broker, store).sync(experiment.id)
         scorecard = build_scorecard(broker.facts(), broker.config(), store)

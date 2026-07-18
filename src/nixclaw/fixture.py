@@ -62,7 +62,7 @@ class FixtureBroker:
                 experiment_id = UUID(path.rsplit("/", 1)[-1])
                 experiment = self._experiments[experiment_id]
             except (ValueError, KeyError):
-                return self._response(404, _error("not_found", "Experiment was not found"))
+                return self._response(404, _error("NOT_FOUND", "Experiment was not found"))
             return self._response(200, _envelope(self._dump(experiment)))
         if request.method == "POST" and path == "/v1/experiments":
             return self._create_experiment(request)
@@ -71,7 +71,7 @@ class FixtureBroker:
                 202,
                 _envelope({"id": str(uuid4()), "state": "awaitingApproval"}),
             )
-        return self._response(404, _error("route_not_found", "Route is not exposed"))
+        return self._response(404, _error("NOT_FOUND", "Route is not exposed"))
 
     def advance(self, experiment_id: UUID, state: ExperimentState) -> Experiment:
         with self._lock:
@@ -80,40 +80,35 @@ class FixtureBroker:
             experiment.updated_at = datetime.now(UTC)
             if state == ExperimentState.ACCEPTED:
                 experiment.candidate_profile_hash = "sha256:candidate"
-                experiment.candidate_generation = "/nix/store/fixture-candidate-system"
-                experiment.baseline_result = {
-                    "summary": {
-                        "medianThroughputTokensPerSecond": 100.0,
-                        "p95TtftMs": 100.0,
-                        "p95InterTokenLatencyMs": 10.0,
-                    }
-                }
-                experiment.candidate_result = {
-                    "summary": {
-                        "medianThroughputTokensPerSecond": 104.0,
-                        "p95TtftMs": 109.0,
-                        "p95InterTokenLatencyMs": 10.5,
-                        "peakMemoryRatio": 0.81,
-                    }
-                }
+                experiment.candidate_generation = "nixos-fixture-candidate"
+                experiment.baseline_benchmark = self._benchmark(
+                    generation=experiment.base_generation,
+                    profile_hash=experiment.original_profile_hash,
+                    throughput=100.0,
+                    ttft=100.0,
+                    inter_token_latency=10.0,
+                )
+                experiment.candidate_benchmark = self._benchmark(
+                    generation=experiment.candidate_generation,
+                    profile_hash=experiment.candidate_profile_hash,
+                    throughput=104.0,
+                    ttft=109.0,
+                    inter_token_latency=10.5,
+                )
                 experiment.decision = {
                     "accepted": True,
-                    "deltas": {
-                        "throughputPercent": 4.0,
-                        "p95TtftPercent": 9.0,
-                        "p95InterTokenPercent": 5.0,
+                    "baseline": {"outputTokensPerSecond": 100.0},
+                    "candidate": {"outputTokensPerSecond": 104.0},
+                    "percentageDeltas": {
+                        "outputTokensPerSecond": 4.0,
+                        "ttftMs": 9.0,
+                        "interTokenLatencyMs": 5.0,
                     },
-                    "gates": [
-                        {
-                            "code": "throughput_improvement",
-                            "passed": True,
-                            "message": "Throughput change is 4.00%",
-                        },
-                        {
-                            "code": "correctness",
-                            "passed": True,
-                            "message": "All correctness probes passed",
-                        },
+                    "passedGates": ["throughput_improvement", "correctness"],
+                    "failedGates": [],
+                    "explanations": [
+                        "Throughput change is 4.00%",
+                        "All correctness probes passed",
                     ],
                 }
             return experiment
@@ -125,7 +120,7 @@ class FixtureBroker:
             return self._response(
                 422,
                 _error(
-                    "invalid_request",
+                    "INVALID_REQUEST",
                     "Request failed schema validation",
                     {"errors": exc.errors(include_url=False, include_context=False)},
                 ),
@@ -134,19 +129,19 @@ class FixtureBroker:
             return self._response(
                 409,
                 _error(
-                    "stale_generation",
+                    "STALE_GENERATION",
                     "Base generation is no longer active",
                     {"currentGeneration": self.generation},
                 ),
             )
         supplied = parsed.profile_patch.supplied()
-        allowed = self._config()["tunables"]
+        allowed = self._config()["tunableFields"]
         unknown = sorted(set(supplied) - set(allowed))
         if unknown:
             return self._response(
                 422,
                 _error(
-                    "unsupported_tunable",
+                    "UNSUPPORTED_TUNABLE",
                     "Patch contains unsupported fields",
                     {"fields": unknown},
                 ),
@@ -163,7 +158,6 @@ class FixtureBroker:
                 workload_id=parsed.workload_id,
                 hypothesis=parsed.hypothesis,
                 profile_patch=parsed.profile_patch,
-                client_request_id=parsed.client_request_id,
                 original_profile_hash=self.profile_hash,
                 created_at=now,
                 updated_at=now,
@@ -174,9 +168,46 @@ class FixtureBroker:
 
     @staticmethod
     def _dump(model: Experiment) -> dict[str, Any]:
-        payload = model.model_dump(mode="json", by_alias=True)
+        payload = model.model_dump(mode="json", by_alias=True, exclude_none=True)
         payload["profilePatch"] = model.profile_patch.supplied()
         return payload
+
+    def _benchmark(
+        self,
+        *,
+        generation: str,
+        profile_hash: str,
+        throughput: float,
+        ttft: float,
+        inter_token_latency: float,
+    ) -> dict[str, Any]:
+        return {
+            "environmentFingerprint": "sha256:fixture",
+            "workloadId": "agent-tools",
+            "servedModel": "fixture/model",
+            "generation": generation,
+            "profileHash": profile_hash,
+            "warmupCount": 1,
+            "measuredRunCount": 3,
+            "samples": [],
+            "requestsAttempted": 12,
+            "requestsSucceeded": 12,
+            "inputTokens": 49152,
+            "outputTokens": 1536,
+            "outputTokensPerSecond": {"median": throughput, "p95": throughput},
+            "ttftMs": {"median": ttft, "p95": ttft},
+            "interTokenLatencyMs": {
+                "median": inter_token_latency,
+                "p95": inter_token_latency,
+            },
+            "structuredOutputCorrect": True,
+            "toolCallCorrect": True,
+            "healthFailures": 0,
+            "restarts": 0,
+            "ooms": 0,
+            "ncclErrors": 0,
+            "criticalMemoryPressure": False,
+        }
 
     @staticmethod
     def _response(status: int, payload: dict[str, Any]) -> httpx.Response:
@@ -185,35 +216,32 @@ class FixtureBroker:
     def _facts(self) -> dict[str, Any]:
         return {
             "generation": self.generation,
-            "nixRevision": "fixture-revision",
+            "nixosRevision": "fixture-revision",
             "architecture": "aarch64-linux",
-            "gpus": [
+            "gpu": [
                 {
-                    "index": 0,
                     "model": "NVIDIA GB10",
+                    "count": 1,
                     "computeCapability": "12.1",
                     "memoryBytes": 128_849_018_880,
                 }
             ],
-            "resources": {
-                "cpuCount": 20,
-                "memoryBytes": 129_922_760_704,
-                "swapBytes": 0,
-            },
-            "cluster": [{"nodeId": "nixos-s6", "role": "head", "rank": 0, "healthy": True}],
-            "vllm": {
-                "version": "0.25.1",
-                "model": "fixture/model",
-                "profileHash": self.profile_hash,
-                "healthy": True,
-            },
+            "cpu": {"logicalCores": 20},
+            "memory": {"totalBytes": 129_922_760_704},
+            "clusterNodes": [
+                {"id": "nixos-s6", "role": "head", "rank": 0, "healthy": True}
+            ],
+            "vllmVersion": "0.25.1",
+            "servedModel": "fixture/model",
+            "activeProfileHash": self.profile_hash,
+            "services": [{"name": "vllm", "healthy": True}],
         }
 
     def _config(self) -> dict[str, Any]:
         return {
             "baseGeneration": self.generation,
             "activeProfileName": "baseline",
-            "profileHash": self.profile_hash,
+            "activeProfileHash": self.profile_hash,
             "servedModel": "fixture/model",
             "activeProfile": {
                 "gpuMemoryUtilization": 0.76,
@@ -221,8 +249,8 @@ class FixtureBroker:
                 "enablePrefixCaching": False,
                 "enforceEager": False,
             },
-            "workloadIds": ["interactive", "agent-tool"],
-            "tunables": {
+            "workloadIds": ["interactive", "agent-tools"],
+            "tunableFields": {
                 "gpuMemoryUtilization": {
                     "type": "number",
                     "minimum": 0.5,

@@ -56,9 +56,9 @@ class CandidateGenerator:
                 )
 
         active = config.active_profile
-        tunables = config.tunables
+        tunables = config.tunable_fields
         if (
-            workload_id == "agent-tool"
+            workload_id == "agent-tools"
             and "enablePrefixCaching" in tunables
             and not active.get("enablePrefixCaching", False)
         ):
@@ -72,7 +72,7 @@ class CandidateGenerator:
 
         if "maxNumSeqs" in tunables:
             field = tunables["maxNumSeqs"]
-            target = max(4 if workload_id == "agent-tool" else 1, int(field.minimum or 1))
+            target = max(4 if workload_id == "agent-tools" else 1, int(field.minimum or 1))
             if field.maximum is not None:
                 target = min(target, int(field.maximum))
             if active.get("maxNumSeqs") != target:
@@ -121,7 +121,7 @@ class CandidateGenerator:
 
     @staticmethod
     def _legal_patch(patch: dict[str, Any], config: Config) -> bool:
-        return bool(patch) and set(patch).issubset(config.tunables)
+        return bool(patch) and set(patch).issubset(config.tunable_fields)
 
     @staticmethod
     def _changes_active(patch: dict[str, Any], config: Config) -> bool:
@@ -149,7 +149,7 @@ class Optimizer:
         episode_id = self.store.start_episode(
             request=f"Optimize workload {workload_id}",
             environment=environment,
-            model=facts.vllm.model,
+            model=facts.served_model,
         )
         request = CreateExperimentRequest(
             base_generation=config.base_generation,

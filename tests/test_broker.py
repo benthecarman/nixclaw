@@ -16,15 +16,15 @@ def client_and_fixture() -> tuple[BrokerClient, FixtureBroker]:
 def test_reads_facts_and_config() -> None:
     client, _ = client_and_fixture()
     with client:
-        assert client.facts().gpus[0].compute_capability == "12.1"
-        assert "enablePrefixCaching" in client.config().tunables
+        assert client.facts().gpu[0].compute_capability == "12.1"
+        assert "enablePrefixCaching" in client.config().tunable_fields
 
 
 def test_creates_idempotent_experiment() -> None:
     client, fixture = client_and_fixture()
     request = CreateExperimentRequest(
         base_generation=fixture.generation,
-        workload_id="agent-tool",
+        workload_id="agent-tools",
         hypothesis="Repeated prefixes should benefit from caching.",
         profile_patch=VllmProfilePatch(enable_prefix_caching=True),
         client_request_id=uuid4(),
@@ -40,14 +40,14 @@ def test_rejects_stale_generation() -> None:
     client, _ = client_and_fixture()
     request = CreateExperimentRequest(
         base_generation="stale",
-        workload_id="agent-tool",
+        workload_id="agent-tools",
         hypothesis="Try a legal profile.",
         profile_patch=VllmProfilePatch(enable_prefix_caching=True),
         client_request_id=uuid4(),
     )
     with client, pytest.raises(BrokerError) as caught:
         client.create_experiment(request)
-    assert caught.value.code == "stale_generation"
+    assert caught.value.code == "STALE_GENERATION"
 
 
 def test_profile_patch_preserves_explicit_nullable_reset() -> None:

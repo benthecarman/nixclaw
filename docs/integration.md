@@ -50,7 +50,7 @@ collected from systemd, the kernel log, and GPU telemetry.
 nixclaw-bench run \
   --endpoint http://127.0.0.1:8000 \
   --model served-model \
-  --workload workloads/agent-tool.json \
+  --workload workloads/agent-tools.json \
   --environment-fingerprint sha256:... \
   --generation /nix/store/...-nixos-system \
   --profile-hash sha256:... \
@@ -63,9 +63,9 @@ nixclaw-bench compare \
   --output decision.json
 ```
 
-`host-signals.json` follows `workloads/host-signals.example.json`. Any OOM,
-NCCL failure, restart, or sustained critical memory pressure must be included
-as a critical failure.
+`host-signals.json` follows `workloads/host-signals.example.json`. It records
+the health failure, restart, OOM, and NCCL error counts plus whether critical
+memory pressure occurred.
 
 The broker attaches both benchmark files and the decision to `ExperimentV1`.
 Afterward Hermes runs `nixclaw-agent experiments sync ID`; the local store

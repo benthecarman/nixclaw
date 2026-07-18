@@ -1,4 +1,7 @@
 {
-  "peakMemoryRatio": 0.81,
-  "failures": []
+  "healthFailures": 0,
+  "restarts": 0,
+  "ooms": 0,
+  "ncclErrors": 0,
+  "criticalMemoryPressure": false
 }

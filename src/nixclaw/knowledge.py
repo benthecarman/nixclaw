@@ -34,14 +34,14 @@ def environment_document(facts: Facts, config: Config, workload_id: str) -> dict
                 "computeCapability": gpu.compute_capability,
                 "memoryBytes": gpu.memory_bytes,
             }
-            for gpu in facts.gpus
+            for gpu in facts.gpu
         ],
-        "nixRevision": facts.nix_revision,
-        "vllmVersion": facts.vllm.version,
+        "nixRevision": facts.nixos_revision,
+        "vllmVersion": facts.vllm_version,
         "servedModel": config.served_model,
         "cluster": [
             {"role": node.role, "rank": node.rank}
-            for node in sorted(facts.cluster, key=lambda item: item.rank)
+            for node in sorted(facts.cluster_nodes, key=lambda item: item.rank)
         ],
         "workloadId": workload_id,
     }
@@ -179,8 +179,8 @@ class KnowledgeStore(AbstractContextManager["KnowledgeStore"]):
                 ),
             )
             for kind, payload in (
-                ("baseline", experiment.baseline_result),
-                ("candidate", experiment.candidate_result),
+                ("baseline", experiment.baseline_benchmark),
+                ("candidate", experiment.candidate_benchmark),
                 ("decision", experiment.decision),
             ):
                 if payload is not None:
@@ -263,20 +263,9 @@ class KnowledgeStore(AbstractContextManager["KnowledgeStore"]):
         return [item[1] for item in ranked[:limit]]
 
     def latest_peak_memory_ratio(self, environment: dict[str, Any]) -> float | None:
-        row = self.connection.execute(
-            """
-            SELECT m.payload_json
-            FROM metrics AS m
-            JOIN changes AS c ON c.id = m.change_id
-            WHERE c.environment_fingerprint = ? AND m.kind = 'candidate'
-            ORDER BY m.created_at DESC LIMIT 1
-            """,
-            (environment_fingerprint(environment),),
-        ).fetchone()
-        if row is None:
-            return None
-        value = json.loads(row["payload_json"]).get("summary", {}).get("peakMemoryRatio")
-        return float(value) if value is not None else None
+        # The shared v1 result intentionally exposes only a critical-pressure
+        # boolean, not a memory ratio from which to calculate a safe increment.
+        return None
 
     def list_experiments(self) -> list[dict[str, Any]]:
         rows = self.connection.execute(
@@ -373,8 +362,8 @@ class KnowledgeStore(AbstractContextManager["KnowledgeStore"]):
         ).fetchone()
         assert row is not None
         decision = experiment.decision or {}
-        deltas = decision.get("deltas", {})
-        throughput_delta = deltas.get("throughputPercent")
+        deltas = decision.get("percentageDeltas", {})
+        throughput_delta = deltas.get("outputTokensPerSecond")
         evidence = "Experiment passed every acceptance gate."
         if throughput_delta is not None:
             evidence = f"Throughput changed by {float(throughput_delta):.2f}% and all gates passed."
