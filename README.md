@@ -23,3 +23,24 @@ Start the deterministic broker fixture with:
 ```console
 uv run nixclaw-fixture --port 8765
 ```
+
+Point the client at it and exercise the recursive loop:
+
+```console
+export NIXCLAW_BROKER_URL=http://127.0.0.1:8765
+uv run nixclaw-agent facts
+uv run nixclaw-agent optimize --workload agent-tool
+```
+
+The optimizer stops at host approval. Once an experiment reaches a terminal
+state, synchronize it with `nixclaw-agent experiments sync ID` so accepted or
+negative evidence becomes available to future sessions.
+
+Generate the read-only scorecard with:
+
+```console
+uv run nixclaw-scorecard --output-directory scorecard-output
+```
+
+See [`docs/integration.md`](docs/integration.md) for broker, activator,
+benchmark, OpenShell, and DGX Spark integration details.

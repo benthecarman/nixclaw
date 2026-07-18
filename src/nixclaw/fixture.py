@@ -81,7 +81,41 @@ class FixtureBroker:
             if state == ExperimentState.ACCEPTED:
                 experiment.candidate_profile_hash = "sha256:candidate"
                 experiment.candidate_generation = "/nix/store/fixture-candidate-system"
-                experiment.decision = {"accepted": True, "gates": []}
+                experiment.baseline_result = {
+                    "summary": {
+                        "medianThroughputTokensPerSecond": 100.0,
+                        "p95TtftMs": 100.0,
+                        "p95InterTokenLatencyMs": 10.0,
+                    }
+                }
+                experiment.candidate_result = {
+                    "summary": {
+                        "medianThroughputTokensPerSecond": 104.0,
+                        "p95TtftMs": 109.0,
+                        "p95InterTokenLatencyMs": 10.5,
+                        "peakMemoryRatio": 0.81,
+                    }
+                }
+                experiment.decision = {
+                    "accepted": True,
+                    "deltas": {
+                        "throughputPercent": 4.0,
+                        "p95TtftPercent": 9.0,
+                        "p95InterTokenPercent": 5.0,
+                    },
+                    "gates": [
+                        {
+                            "code": "throughput_improvement",
+                            "passed": True,
+                            "message": "Throughput change is 4.00%",
+                        },
+                        {
+                            "code": "correctness",
+                            "passed": True,
+                            "message": "All correctness probes passed",
+                        },
+                    ],
+                }
             return experiment
 
     def _create_experiment(self, request: httpx.Request) -> httpx.Response:

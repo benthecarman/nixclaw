@@ -24,9 +24,11 @@ dev = [
 
 [project.scripts]
 nixclaw-agent = "nixclaw.cli:app"
+nixclaw-adversarial = "nixclaw.adversarial:app"
 nixclaw-bench = "nixclaw.benchmark:app"
 nixclaw-fixture = "nixclaw.fixture:app"
 nixclaw-policy = "nixclaw.policy:app"
+nixclaw-scorecard = "nixclaw.scorecard:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nixclaw"]

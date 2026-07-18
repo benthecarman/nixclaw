@@ -1,0 +1,99 @@
+# NixClaw integration contract
+
+This repository supplies the untrusted Hermes-side client and the host-side
+benchmark executable. The privileged broker and activator are implemented in
+`benthecarman/nemoclaw-nix`.
+
+## Package handoff
+
+Build the wheel without network access after the locked dependencies are
+available:
+
+```console
+uv build --wheel
+```
+
+The Nix package must expose `nixclaw-agent` inside the Hermes sandbox and
+`nixclaw-bench`, `nixclaw-policy`, and `nixclaw-adversarial` to the relevant
+host or sandbox services. Do not install the project with mutable `pip` on the
+Spark.
+
+The Hermes sandbox needs these variables:
+
+```text
+NIXCLAW_BROKER_URL=https://broker.internal:8443
+NIXCLAW_STATE_DIR=/sandbox/state/nixclaw
+NIXCLAW_BROKER_CREDENTIAL=openshell:resolve:env:NIXCLAW_BROKER_TOKEN
+```
+
+The real broker credential belongs to the OpenShell provider. The sandbox
+sends only the placeholder, which the proxy resolves after its REST policy
+admits the request.
+
+## Broker behavior
+
+The source contract is `schemas/nixclaw/v1`. The broker must reject unknown
+fields, stale generations, unsupported tunables, redirects, and duplicate
+requests with conflicting payloads. A repeated idempotency key with an
+identical payload returns the original experiment.
+
+The optimizer stops after submission. It never calls approval or activation;
+those operations remain available only through the host activator socket.
+
+## Activator benchmark call
+
+For each temporary candidate, the activator runs the same workload against the
+baseline and candidate profiles. It supplies generation-specific host signals
+collected from systemd, the kernel log, and GPU telemetry.
+
+```console
+nixclaw-bench run \
+  --endpoint http://127.0.0.1:8000 \
+  --model served-model \
+  --workload workloads/agent-tool.json \
+  --environment-fingerprint sha256:... \
+  --generation /nix/store/...-nixos-system \
+  --profile-hash sha256:... \
+  --health-signals host-signals.json \
+  --output candidate.json
+
+nixclaw-bench compare \
+  --baseline baseline.json \
+  --candidate candidate.json \
+  --output decision.json
+```
+
+`host-signals.json` follows `workloads/host-signals.example.json`. Any OOM,
+NCCL failure, restart, or sustained critical memory pressure must be included
+as a critical failure.
+
+The broker attaches both benchmark files and the decision to `ExperimentV1`.
+Afterward Hermes runs `nixclaw-agent experiments sync ID`; the local store
+promotes accepted evidence or records negative evidence.
+
+## OpenShell policy
+
+Render `openshell/policy.yaml.in` with immutable Nix store paths and concrete
+broker/inference destinations. Apply it at sandbox creation because filesystem,
+Landlock, and process fields are static.
+
+After onboarding, run `nixclaw-adversarial` inside the sandbox. It must permit
+the facts route while denying the nonexistent activator route, arbitrary
+egress, the activator socket, Nix daemon socket, Docker socket, and host NixOS
+configuration.
+
+## DGX Spark acceptance
+
+The current target, `hackathon@nixos-s6`, is ARM64 NixOS with one NVIDIA GB10
+SM121 GPU and approximately 121 GiB system memory. Before live acceptance:
+
+1. Person 1 packages this wheel and the agreed JSON Schemas through Nix.
+2. Deploy the broker, activator, vLLM 0.25.1 service, Hermes, and OpenShell.
+3. Render and apply the concrete OpenShell policy.
+4. Run the two workload manifests against the configurable served model.
+5. Complete one experiment through approval, temporary activation, comparison,
+   confirmation or rollback, and lesson synchronization.
+6. Start a fresh Hermes session and verify the validated lesson is retrieved.
+7. Run the live adversarial command and inspect OpenShell denial logs.
+
+Fixture results are never substitutes for this physical-host acceptance.

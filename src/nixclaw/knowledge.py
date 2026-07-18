@@ -294,6 +294,78 @@ class KnowledgeStore(AbstractContextManager["KnowledgeStore"]):
             for row in rows
         ]
 
+    def scorecard_snapshot(self) -> dict[str, Any]:
+        """Return a sanitized read model for static scorecard generation."""
+
+        episode_row = self.connection.execute(
+            """
+            SELECT COUNT(*) AS total,
+                   SUM(CASE WHEN status != 'failed' THEN 1 ELSE 0 END) AS successful,
+                   SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
+            FROM episodes
+            """
+        ).fetchone()
+        change_rows = self.connection.execute(
+            """
+            SELECT id, experiment_id, workload_id, profile_patch_json, outcome,
+                   base_generation, candidate_generation, created_at, updated_at
+            FROM changes ORDER BY created_at DESC
+            """
+        ).fetchall()
+        experiments: list[dict[str, Any]] = []
+        for row in change_rows:
+            metrics = self.connection.execute(
+                "SELECT kind, payload_json FROM metrics WHERE change_id = ?",
+                (row["id"],),
+            ).fetchall()
+            experiments.append(
+                {
+                    "experimentId": row["experiment_id"],
+                    "workloadId": row["workload_id"],
+                    "profilePatch": json.loads(row["profile_patch_json"]),
+                    "outcome": row["outcome"],
+                    "baseGeneration": row["base_generation"],
+                    "candidateGeneration": row["candidate_generation"],
+                    "createdAt": row["created_at"],
+                    "updatedAt": row["updated_at"],
+                    "metrics": {
+                        metric["kind"]: json.loads(metric["payload_json"])
+                        for metric in metrics
+                    },
+                }
+            )
+        lesson_rows = self.connection.execute(
+            """
+            SELECT id, symptom, workload_id, environment_fingerprint, cause,
+                   repair_json, evidence_summary, confidence, status, updated_at
+            FROM lessons ORDER BY updated_at DESC
+            """
+        ).fetchall()
+        lessons = [
+            {
+                "id": row["id"],
+                "symptom": row["symptom"],
+                "workloadId": row["workload_id"],
+                "environmentFingerprint": row["environment_fingerprint"],
+                "cause": row["cause"],
+                "repair": json.loads(row["repair_json"]),
+                "evidence": row["evidence_summary"],
+                "confidence": row["confidence"],
+                "status": row["status"],
+                "updatedAt": row["updated_at"],
+            }
+            for row in lesson_rows
+        ]
+        return {
+            "episodes": {
+                "total": int(episode_row["total"] or 0),
+                "successful": int(episode_row["successful"] or 0),
+                "failed": int(episode_row["failed"] or 0),
+            },
+            "experiments": experiments,
+            "lessons": lessons,
+        }
+
     def _promote_lesson(self, change_id: str, experiment: Experiment) -> None:
         row = self.connection.execute(
             "SELECT * FROM changes WHERE id = ?",
