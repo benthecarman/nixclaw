@@ -376,7 +376,12 @@ class BenchmarkRunner:
                         output_tokens = int(usage.get("completion_tokens", output_tokens))
                     choices = chunk.get("choices") or []
                     delta = choices[0].get("delta", {}) if choices else {}
-                    if delta.get("content") or delta.get("tool_calls"):
+                    if (
+                        delta.get("content")
+                        or delta.get("reasoning")
+                        or delta.get("reasoning_content")
+                        or delta.get("tool_calls")
+                    ):
                         now = time.perf_counter()
                         if first_token is None:
                             first_token = now
@@ -413,6 +418,10 @@ class BenchmarkRunner:
             "model": self.model,
             "messages": [{"role": "user", "content": "Return status ok as JSON."}],
             "temperature": 0,
+            # Reasoning tokens are outside the constrained content channel. Some
+            # reasoning models otherwise apply the grammar across both channels
+            # and emit malformed JSON when the final answer begins.
+            "chat_template_kwargs": {"enable_thinking": False},
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {

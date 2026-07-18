@@ -75,6 +75,7 @@ def test_runner_exercises_stream_and_correctness() -> None:
             return httpx.Response(200, json={"data": [{"id": "test-model"}]})
         body = json.loads(request.content)
         if "response_format" in body:
+            assert body["chat_template_kwargs"] == {"enable_thinking": False}
             return httpx.Response(
                 200,
                 json={"choices": [{"message": {"content": '{"status":"ok"}'}}]},
@@ -101,7 +102,8 @@ def test_runner_exercises_stream_and_correctness() -> None:
             )
         stream = "\n".join(
             [
-                'data: {"choices":[{"delta":{"content":"ok"}}]}',
+                'data: {"choices":[{"delta":{"reasoning":"checking"}}]}',
+                'data: {"choices":[{"delta":{"reasoning_content":" done"}}]}',
                 'data: {"choices":[],"usage":{"prompt_tokens":16,"completion_tokens":2}}',
                 "data: [DONE]",
                 "",
