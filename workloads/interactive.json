@@ -1,0 +1,9 @@
+{
+  "id": "interactive",
+  "targetInputTokens": 1024,
+  "maxOutputTokens": 256,
+  "concurrency": 1,
+  "repeatedPrefix": false,
+  "requireStructuredOutput": true,
+  "requireToolCall": true
+}

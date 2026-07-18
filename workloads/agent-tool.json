@@ -1,0 +1,9 @@
+{
+  "id": "agent-tool",
+  "targetInputTokens": 8192,
+  "maxOutputTokens": 512,
+  "concurrency": 4,
+  "repeatedPrefix": true,
+  "requireStructuredOutput": true,
+  "requireToolCall": true
+}

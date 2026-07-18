@@ -1,0 +1,77 @@
+version: 1
+
+filesystem_policy:
+  include_workdir: false
+  read_only:
+    - /usr
+    - /lib
+    - /etc
+    - /proc
+    - /dev/urandom
+    - "@HERMES_ROOT@"
+    - "@NIXCLAW_ROOT@"
+  read_write:
+    - /sandbox/work
+    - /sandbox/state
+    - /sandbox/cache
+    - /tmp
+    - /dev/null
+
+landlock:
+  compatibility: hard_requirement
+
+process:
+  run_as_user: sandbox
+  run_as_group: sandbox
+
+network_policies:
+  nixclaw_broker:
+    name: nixclaw-broker
+    endpoints:
+      - host: "@BROKER_HOST@"
+        port: @BROKER_PORT@
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /v1/facts
+          - allow:
+              method: GET
+              path: /v1/config
+          - allow:
+              method: GET
+              path: /v1/experiments
+          - allow:
+              method: GET
+              path: /v1/experiments/*
+          - allow:
+              method: POST
+              path: /v1/experiments
+          - allow:
+              method: POST
+              path: /v1/proposals
+    binaries:
+      - path: "@NIXCLAW_AGENT_BIN@"
+      - path: "@NIXCLAW_PYTHON_BIN@"
+
+  managed_inference:
+    name: managed-inference
+    endpoints:
+      - host: "@INFERENCE_HOST@"
+        port: @INFERENCE_PORT@
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /health
+          - allow:
+              method: GET
+              path: /v1/models
+          - allow:
+              method: POST
+              path: /v1/chat/completions
+    binaries:
+      - path: "@HERMES_BIN@"
+      - path: "@NIXCLAW_PYTHON_BIN@"

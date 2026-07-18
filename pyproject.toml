@@ -12,6 +12,7 @@ dependencies = [
   "httpx>=0.28,<1",
   "jsonschema>=4.24,<5",
   "pydantic>=2.11,<3",
+  "pyyaml>=6,<7",
   "typer>=0.16,<1",
 ]
 
@@ -23,7 +24,9 @@ dev = [
 
 [project.scripts]
 nixclaw-agent = "nixclaw.cli:app"
+nixclaw-bench = "nixclaw.benchmark:app"
 nixclaw-fixture = "nixclaw.fixture:app"
+nixclaw-policy = "nixclaw.policy:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nixclaw"]
