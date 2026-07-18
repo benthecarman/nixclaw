@@ -6,17 +6,20 @@ benchmark executable. The privileged broker and activator are implemented in
 
 ## Package handoff
 
-Build the wheel without network access after the locked dependencies are
-available:
+Consume this flake from the privileged NixOS configuration, follow its
+`nixpkgs` input, and add `inputs.nixclaw.overlays.default`. The resulting
+`pkgs.nixclaw` derivation supplies the Hermes and host commands without mutable
+Python installation:
 
 ```console
-uv build --wheel
+nix build .#nixclaw
 ```
 
-The Nix package must expose `nixclaw-agent` inside the Hermes sandbox and
+The package exposes `nixclaw-agent` inside the Hermes sandbox and
 `nixclaw-bench`, `nixclaw-policy`, and `nixclaw-adversarial` to the relevant
-host or sandbox services. Do not install the project with mutable `pip` on the
-Spark.
+host or sandbox services. Schemas, skills, policy templates, and workloads are
+available under `${pkgs.nixclaw}/share/nixclaw`. Do not install the project
+with mutable `pip` on the Spark.
 
 The Hermes sandbox needs these variables:
 
@@ -87,7 +90,7 @@ configuration.
 The current target, `hackathon@nixos-s6`, is ARM64 NixOS with one NVIDIA GB10
 SM121 GPU and approximately 121 GiB system memory. Before live acceptance:
 
-1. Person 1 packages this wheel and the agreed JSON Schemas through Nix.
+1. Person 1 consumes `pkgs.nixclaw` and its agreed JSON Schemas through Nix.
 2. Deploy the broker, activator, vLLM 0.25.1 service, Hermes, and OpenShell.
 3. Render and apply the concrete OpenShell policy.
 4. Run the two workload manifests against the configurable served model.

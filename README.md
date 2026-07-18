@@ -18,6 +18,32 @@ uv run pytest
 uv run ruff check .
 ```
 
+## Nix package
+
+Build the complete package with:
+
+```console
+nix build
+nix run .#agent -- --help
+```
+
+The package provides all six `nixclaw-*` commands. Integration assets are
+installed below `$out/share/nixclaw`, including the canonical schemas, Hermes
+skill, OpenShell policy template, and workload manifests.
+
+Another flake can consume the package and overlay directly:
+
+```nix
+inputs.nixclaw.url = "github:benthecarman/nixclaw";
+inputs.nixclaw.inputs.nixpkgs.follows = "nixpkgs";
+
+nixpkgs.overlays = [ inputs.nixclaw.overlays.default ];
+environment.systemPackages = [ pkgs.nixclaw ];
+```
+
+The stable schema path is
+`${pkgs.nixclaw}/share/nixclaw/schemas/nixclaw/v1`.
+
 Start the deterministic broker fixture with:
 
 ```console
