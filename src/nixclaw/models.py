@@ -88,12 +88,19 @@ class Facts(ApiModel):
 
 
 class TunableField(ApiModel):
+    model_config = ConfigDict(
+        alias_generator=_to_camel,
+        populate_by_name=True,
+        extra="allow",
+    )
+
     type: str
     nullable: bool = False
     minimum: float | int | None = None
+    minimum_exclusive: float | int | None = None
     maximum: float | int | None = None
     step: float | int | None = None
-    values: list[Any] | None = None
+    enum: list[Any] | None = None
 
 
 class VllmProfilePatch(ApiModel):

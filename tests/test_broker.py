@@ -17,7 +17,15 @@ def test_reads_facts_and_config() -> None:
     client, _ = client_and_fixture()
     with client:
         assert client.facts().gpu[0].compute_capability == "12.1"
-        assert "enablePrefixCaching" in client.config().tunable_fields
+        config = client.config()
+        assert "enablePrefixCaching" in config.tunable_fields
+        assert config.tunable_fields["gpuMemoryUtilization"].minimum_exclusive == 0.0
+        assert config.tunable_fields["kvCacheDtype"].enum == [
+            "auto",
+            "fp8",
+            "fp8_e4m3",
+            "fp8_e5m2",
+        ]
 
 
 def test_creates_idempotent_experiment() -> None:

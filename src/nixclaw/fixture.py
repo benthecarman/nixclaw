@@ -253,7 +253,7 @@ class FixtureBroker:
             "tunableFields": {
                 "gpuMemoryUtilization": {
                     "type": "number",
-                    "minimum": 0.5,
+                    "minimumExclusive": 0.0,
                     "maximum": 0.95,
                     "step": 0.05,
                 },
@@ -261,6 +261,11 @@ class FixtureBroker:
                 "enablePrefixCaching": {"type": "boolean"},
                 "enableChunkedPrefill": {"type": "boolean", "nullable": True},
                 "enforceEager": {"type": "boolean"},
+                "kvCacheDtype": {
+                    "type": "string",
+                    "enum": ["auto", "fp8", "fp8_e4m3", "fp8_e5m2"],
+                    "nullable": True,
+                },
             },
         }
 
