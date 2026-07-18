@@ -7,7 +7,16 @@
   "properties": {
     "schemaVersion": { "const": "1" },
     "accepted": { "type": "boolean" },
-    "deltas": { "type": "object", "additionalProperties": { "type": ["number", "null"] } },
+    "deltas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["throughputPercent", "p95TtftPercent", "p95InterTokenPercent"],
+      "properties": {
+        "throughputPercent": { "type": ["number", "null"] },
+        "p95TtftPercent": { "type": ["number", "null"] },
+        "p95InterTokenPercent": { "type": ["number", "null"] }
+      }
+    },
     "gates": {
       "type": "array",
       "items": {

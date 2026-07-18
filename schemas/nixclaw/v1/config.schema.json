@@ -16,10 +16,42 @@
         "activeProfileName": { "type": "string", "minLength": 1 },
         "profileHash": { "type": "string", "minLength": 1 },
         "servedModel": { "type": "string", "minLength": 1 },
-        "activeProfile": { "type": "object" },
+        "activeProfile": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "gpuMemoryUtilization": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+            "maxModelLen": { "type": "integer", "minimum": 1 },
+            "maxNumSeqs": { "type": ["integer", "null"], "minimum": 1 },
+            "maxNumBatchedTokens": { "type": ["integer", "null"], "minimum": 1 },
+            "tensorParallelSize": { "type": "integer", "minimum": 1 },
+            "pipelineParallelSize": { "type": "integer", "minimum": 1 },
+            "enablePrefixCaching": { "type": "boolean" },
+            "enableChunkedPrefill": { "type": ["boolean", "null"] },
+            "enforceEager": { "type": "boolean" },
+            "kvCacheDtype": { "enum": ["auto", "fp8", "fp8_e4m3", "fp8_e5m2", null] },
+            "reasoningParser": { "type": ["string", "null"] },
+            "toolCallParser": { "type": ["string", "null"] },
+            "speculativeConfig": { "type": ["object", "null"] }
+          }
+        },
         "workloadIds": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
         "tunables": {
           "type": "object",
+          "propertyNames": {
+            "enum": [
+              "gpuMemoryUtilization",
+              "maxModelLen",
+              "maxNumSeqs",
+              "maxNumBatchedTokens",
+              "tensorParallelSize",
+              "pipelineParallelSize",
+              "enablePrefixCaching",
+              "enableChunkedPrefill",
+              "enforceEager",
+              "kvCacheDtype"
+            ]
+          },
           "additionalProperties": {
             "type": "object",
             "additionalProperties": false,

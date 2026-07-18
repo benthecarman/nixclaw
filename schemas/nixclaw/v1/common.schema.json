@@ -10,8 +10,8 @@
       "properties": {
         "gpuMemoryUtilization": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
         "maxModelLen": { "type": "integer", "minimum": 1 },
-        "maxNumSeqs": { "type": "integer", "minimum": 1 },
-        "maxNumBatchedTokens": { "type": "integer", "minimum": 1 },
+        "maxNumSeqs": { "type": ["integer", "null"], "minimum": 1 },
+        "maxNumBatchedTokens": { "type": ["integer", "null"], "minimum": 1 },
         "tensorParallelSize": { "type": "integer", "minimum": 1 },
         "pipelineParallelSize": { "type": "integer", "minimum": 1 },
         "enablePrefixCaching": { "type": "boolean" },

@@ -48,3 +48,13 @@ def test_rejects_stale_generation() -> None:
     with client, pytest.raises(BrokerError) as caught:
         client.create_experiment(request)
     assert caught.value.code == "stale_generation"
+
+
+def test_profile_patch_preserves_explicit_nullable_reset() -> None:
+    patch = VllmProfilePatch(enable_chunked_prefill=None)
+    assert patch.supplied() == {"enableChunkedPrefill": None}
+
+
+def test_profile_patch_rejects_null_for_required_value() -> None:
+    with pytest.raises(ValueError):
+        VllmProfilePatch(gpu_memory_utilization=None)

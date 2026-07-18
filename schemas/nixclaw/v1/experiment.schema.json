@@ -15,7 +15,19 @@
     "originalProfileHash": { "type": "string" },
     "candidateProfileHash": { "type": ["string", "null"] },
     "candidateGeneration": { "type": ["string", "null"] },
-    "findings": { "type": "array", "items": { "type": "object" } },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message", "field"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "message": { "type": "string", "minLength": 1 },
+          "field": { "type": ["string", "null"] }
+        }
+      }
+    },
     "baselineResult": { "type": ["object", "null"] },
     "candidateResult": { "type": ["object", "null"] },
     "decision": { "type": ["object", "null"] },

@@ -77,7 +77,7 @@ class BrokerClient:
             "POST",
             "/v1/experiments",
             Experiment,
-            json=request.model_dump(mode="json", by_alias=True),
+            json=request.model_dump(mode="json", by_alias=True, exclude_unset=True),
             headers={"Idempotency-Key": str(request.client_request_id)},
         )
 

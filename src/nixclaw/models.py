@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 def _to_camel(value: str) -> str:
@@ -102,12 +102,29 @@ class VllmProfilePatch(ApiModel):
     enable_prefix_caching: bool | None = None
     enable_chunked_prefill: bool | None = None
     enforce_eager: bool | None = None
-    kv_cache_dtype: str | None = None
+    kv_cache_dtype: Literal["auto", "fp8", "fp8_e4m3", "fp8_e5m2"] | None = None
+
+    @model_validator(mode="after")
+    def reject_unsupported_nulls(self) -> VllmProfilePatch:
+        nullable = {
+            "max_num_seqs",
+            "max_num_batched_tokens",
+            "enable_chunked_prefill",
+            "kv_cache_dtype",
+        }
+        invalid = {
+            field
+            for field in self.model_fields_set
+            if getattr(self, field) is None and field not in nullable
+        }
+        if invalid:
+            raise ValueError(f"Fields do not accept null: {', '.join(sorted(invalid))}")
+        return self
 
     def supplied(self) -> dict[str, Any]:
         """Return only explicitly supplied wire fields."""
 
-        return self.model_dump(by_alias=True, exclude_none=True)
+        return self.model_dump(by_alias=True, include=self.model_fields_set)
 
 
 class Config(ApiModel):

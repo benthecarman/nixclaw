@@ -13,9 +13,67 @@
     "profileHash": { "type": "string" },
     "warmupCount": { "type": "integer", "minimum": 0 },
     "runCount": { "type": "integer", "minimum": 1 },
-    "samples": { "type": "array", "items": { "type": "object" } },
-    "summary": { "type": "object" },
-    "correctness": { "type": "object" },
-    "failures": { "type": "array", "items": { "type": "object" } }
+    "samples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["run", "request", "success", "inputTokens", "outputTokens", "durationMs", "ttftMs", "interTokenLatenciesMs", "error"],
+        "properties": {
+          "run": { "type": "integer", "minimum": 0 },
+          "request": { "type": "integer", "minimum": 0 },
+          "success": { "type": "boolean" },
+          "inputTokens": { "type": "integer", "minimum": 0 },
+          "outputTokens": { "type": "integer", "minimum": 0 },
+          "durationMs": { "type": "number", "minimum": 0 },
+          "ttftMs": { "type": ["number", "null"], "minimum": 0 },
+          "interTokenLatenciesMs": {
+            "type": "array",
+            "items": { "type": "number", "minimum": 0 }
+          },
+          "error": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestsAttempted", "requestsSucceeded", "inputTokens", "outputTokens", "medianThroughputTokensPerSecond", "p95TtftMs", "p95InterTokenLatencyMs", "peakMemoryRatio"],
+      "properties": {
+        "requestsAttempted": { "type": "integer", "minimum": 0 },
+        "requestsSucceeded": { "type": "integer", "minimum": 0 },
+        "inputTokens": { "type": "integer", "minimum": 0 },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "medianThroughputTokensPerSecond": { "type": "number", "minimum": 0 },
+        "p95TtftMs": { "type": ["number", "null"], "minimum": 0 },
+        "p95InterTokenLatencyMs": { "type": ["number", "null"], "minimum": 0 },
+        "peakMemoryRatio": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    },
+    "correctness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["health", "models", "generation", "structuredOutput", "toolCall"],
+      "properties": {
+        "health": { "type": "boolean" },
+        "models": { "type": "boolean" },
+        "generation": { "type": "boolean" },
+        "structuredOutput": { "type": "boolean" },
+        "toolCall": { "type": "boolean" }
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message", "critical"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "message": { "type": "string", "minLength": 1 },
+          "critical": { "type": "boolean" }
+        }
+      }
+    }
   }
 }

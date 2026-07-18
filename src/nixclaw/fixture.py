@@ -127,7 +127,7 @@ class FixtureBroker:
                 _error(
                     "invalid_request",
                     "Request failed schema validation",
-                    {"errors": exc.errors(include_url=False)},
+                    {"errors": exc.errors(include_url=False, include_context=False)},
                 ),
             )
         if parsed.base_generation != self.generation:
@@ -174,7 +174,9 @@ class FixtureBroker:
 
     @staticmethod
     def _dump(model: Experiment) -> dict[str, Any]:
-        return model.model_dump(mode="json", by_alias=True)
+        payload = model.model_dump(mode="json", by_alias=True)
+        payload["profilePatch"] = model.profile_patch.supplied()
+        return payload
 
     @staticmethod
     def _response(status: int, payload: dict[str, Any]) -> httpx.Response:
