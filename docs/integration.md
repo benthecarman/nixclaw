@@ -45,9 +45,11 @@ those operations remain available only through the host activator socket.
 
 ## Activator benchmark call
 
-For each temporary candidate, the activator runs the same workload against the
-baseline and candidate profiles. It supplies generation-specific host signals
-collected from systemd, the kernel log, and GPU telemetry.
+For each temporary candidate, the operator runs the same workload directly
+against the stable replica and the drained canary. Bypassing the normal router
+keeps measurements attributable to one node. Each result names that node and
+supplies generation-specific host signals collected from systemd, the kernel
+log, and GPU telemetry.
 
 ```console
 nixclaw-bench run \
@@ -55,6 +57,7 @@ nixclaw-bench run \
   --model served-model \
   --workload workloads/agent-tools.json \
   --environment-fingerprint sha256:... \
+  --node-id nixos-s4 \
   --generation /nix/store/...-nixos-system \
   --profile-hash sha256:... \
   --health-signals host-signals.json \
@@ -77,9 +80,12 @@ memory pressure occurred.
 
 An operator attaches both benchmark files and the decision through the
 activator's Unix socket before confirmation. The activator verifies them
-against `experiment-results.schema.json` and the reviewed experiment identity.
-Afterward Hermes runs `nixclaw-agent experiments sync ID`; the local store
-promotes accepted evidence or records negative evidence.
+against `experiment-results.schema.json`, including that the baseline result
+came from an advertised stable replica and the candidate result came from the
+approved canary. Confirmation promotes an accepted generation to the stable
+replicas and restores normal routing. Rejection or lease expiry rolls back only
+the canary. Afterward Hermes runs `nixclaw-agent experiments sync ID`; the local
+store promotes accepted evidence or records negative evidence.
 
 ## OpenShell policy
 

@@ -55,6 +55,7 @@ def test_fixture_experiment_matches_canonical_schema() -> None:
                 "workloadId": "agent-tools",
                 "hypothesis": "Repeated prefixes should benefit from caching.",
                 "profilePatch": {"enablePrefixCaching": True},
+                "targetNodes": ["nixos-s4"],
                 "clientRequestId": str(uuid4()),
             },
         )

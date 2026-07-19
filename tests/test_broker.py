@@ -35,6 +35,7 @@ def test_creates_idempotent_experiment() -> None:
         workload_id="agent-tools",
         hypothesis="Repeated prefixes should benefit from caching.",
         profile_patch=VllmProfilePatch(enable_prefix_caching=True),
+        target_nodes=["nixos-s4"],
         client_request_id=uuid4(),
     )
     with client:
@@ -51,6 +52,7 @@ def test_rejects_stale_generation() -> None:
         workload_id="agent-tools",
         hypothesis="Try a legal profile.",
         profile_patch=VllmProfilePatch(enable_prefix_caching=True),
+        target_nodes=["nixos-s4"],
         client_request_id=uuid4(),
     )
     with client, pytest.raises(BrokerError) as caught:

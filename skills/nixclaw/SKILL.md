@@ -41,7 +41,8 @@ OpenShell and the broker enforce the actual authority.
 3. State one measurable hypothesis and preserve the current generation as the
    base.
 4. Run `nixclaw-agent optimize --workload agent-tools`. The optimizer selects
-   one legal, untried patch and submits it idempotently.
+   one legal, untried patch and submits it idempotently to a broker-advertised
+   canary. Never choose an unadvertised node.
 5. Report the experiment ID and stop at `awaitingApproval`. Only the host
    operator can review or activate it.
 6. After the operator runs the experiment, use

@@ -58,6 +58,7 @@ class MetricDistribution(ApiModel):
 
 class BenchmarkResult(ApiModel):
     environment_fingerprint: str
+    node_id: str
     workload_id: str
     served_model: str
     generation: str
@@ -255,6 +256,7 @@ class BenchmarkRunner:
         workload: WorkloadManifest,
         *,
         environment_fingerprint: str,
+        node_id: str,
         generation: str,
         profile_hash: str,
         warmup_count: int = 1,
@@ -283,6 +285,7 @@ class BenchmarkRunner:
         qualification_failures = int(not health) + int(not models)
         return BenchmarkResult(
             environment_fingerprint=environment_fingerprint,
+            node_id=node_id,
             workload_id=workload.id,
             served_model=self.model,
             generation=generation,
@@ -505,6 +508,7 @@ def run_command(
     model: Annotated[str, typer.Option()],
     workload: Annotated[Path, typer.Option(exists=True, dir_okay=False)],
     environment_fingerprint: Annotated[str, typer.Option()],
+    node_id: Annotated[str, typer.Option()],
     generation: Annotated[str, typer.Option()],
     profile_hash: Annotated[str, typer.Option()],
     output: Annotated[Path, typer.Option()],
@@ -531,6 +535,7 @@ def run_command(
             return await runner.run(
                 manifest,
                 environment_fingerprint=environment_fingerprint,
+                node_id=node_id,
                 generation=generation,
                 profile_hash=profile_hash,
                 warmup_count=warmup_count,

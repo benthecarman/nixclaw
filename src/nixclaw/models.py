@@ -62,6 +62,7 @@ class ClusterNode(ApiModel):
     id: str
     role: str
     rank: int
+    experiment_role: Literal["baseline", "canary"]
     healthy: bool
 
 
@@ -143,6 +144,8 @@ class Config(ApiModel):
     active_profile: dict[str, Any]
     workload_ids: list[str]
     tunable_fields: dict[str, TunableField]
+    baseline_nodes: list[str]
+    experiment_targets: list[str]
 
 
 class CreateExperimentRequest(ApiModel):
@@ -150,7 +153,14 @@ class CreateExperimentRequest(ApiModel):
     workload_id: str
     hypothesis: str = Field(min_length=1, max_length=2000)
     profile_patch: VllmProfilePatch
+    target_nodes: list[str] = Field(min_length=1)
     client_request_id: UUID
+
+    @model_validator(mode="after")
+    def reject_duplicate_targets(self) -> CreateExperimentRequest:
+        if len(self.target_nodes) != len(set(self.target_nodes)):
+            raise ValueError("targetNodes must contain unique node IDs")
+        return self
 
 
 class ExperimentState(StrEnum):
@@ -173,6 +183,8 @@ class Experiment(ApiModel):
     workload_id: str
     hypothesis: str
     profile_patch: VllmProfilePatch
+    target_nodes: list[str]
+    promotion_nodes: list[str]
     original_profile_hash: str
     candidate_profile_hash: str | None = None
     candidate_generation: str | None = None

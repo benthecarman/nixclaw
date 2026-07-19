@@ -125,6 +125,8 @@ class Optimizer:
         config = self.broker.config()
         if workload_id not in config.workload_ids:
             raise ValueError(f"Broker does not advertise workload {workload_id!r}")
+        if not config.experiment_targets:
+            raise ValueError("Broker does not advertise a canary experiment target")
         environment = environment_document(facts, config, workload_id)
         candidates = self.generator.generate(facts, config, workload_id, self.store)
         if not candidates:
@@ -140,6 +142,7 @@ class Optimizer:
             workload_id=workload_id,
             hypothesis=candidate.hypothesis,
             profile_patch=candidate.patch,
+            target_nodes=[config.experiment_targets[0]],
             client_request_id=uuid4(),
         )
         try:

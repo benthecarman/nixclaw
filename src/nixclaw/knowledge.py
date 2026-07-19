@@ -40,7 +40,12 @@ def environment_document(facts: Facts, config: Config, workload_id: str) -> dict
         "vllmVersion": facts.vllm_version,
         "servedModel": config.served_model,
         "cluster": [
-            {"role": node.role, "rank": node.rank}
+            {
+                "id": node.id,
+                "role": node.role,
+                "rank": node.rank,
+                "experimentRole": node.experiment_role,
+            }
             for node in sorted(facts.cluster_nodes, key=lambda item: item.rank)
         ],
         "workloadId": workload_id,

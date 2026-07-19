@@ -23,6 +23,7 @@ def result(
 ) -> BenchmarkResult:
     return BenchmarkResult(
         environment_fingerprint="sha256:test",
+        node_id="nixos-s4",
         workload_id="agent-tools",
         served_model="test-model",
         generation="generation",
@@ -126,6 +127,7 @@ def test_runner_exercises_stream_and_correctness() -> None:
                     concurrency=1,
                 ),
                 environment_fingerprint="sha256:test",
+                node_id="nixos-s4",
                 generation="generation",
                 profile_hash="profile",
                 warmup_count=0,

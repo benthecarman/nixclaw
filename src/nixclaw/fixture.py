@@ -82,6 +82,7 @@ class FixtureBroker:
                 experiment.candidate_profile_hash = "sha256:candidate"
                 experiment.candidate_generation = "nixos-fixture-candidate"
                 experiment.baseline_benchmark = self._benchmark(
+                    node_id=experiment.promotion_nodes[0],
                     generation=experiment.base_generation,
                     profile_hash=experiment.original_profile_hash,
                     throughput=100.0,
@@ -89,6 +90,7 @@ class FixtureBroker:
                     inter_token_latency=10.0,
                 )
                 experiment.candidate_benchmark = self._benchmark(
+                    node_id=experiment.target_nodes[0],
                     generation=experiment.candidate_generation,
                     profile_hash=experiment.candidate_profile_hash,
                     throughput=104.0,
@@ -146,6 +148,16 @@ class FixtureBroker:
                     {"fields": unknown},
                 ),
             )
+        allowed_targets = set(self._config()["experimentTargets"])
+        if not set(parsed.target_nodes).issubset(allowed_targets):
+            return self._response(
+                422,
+                _error(
+                    "UNSUPPORTED_TARGET",
+                    "Experiment targets are not advertised canaries",
+                    {"targets": parsed.target_nodes},
+                ),
+            )
         with self._lock:
             if parsed.client_request_id in self._idempotency:
                 existing_id = self._idempotency[parsed.client_request_id]
@@ -158,6 +170,8 @@ class FixtureBroker:
                 workload_id=parsed.workload_id,
                 hypothesis=parsed.hypothesis,
                 profile_patch=parsed.profile_patch,
+                target_nodes=parsed.target_nodes,
+                promotion_nodes=self._config()["baselineNodes"],
                 original_profile_hash=self.profile_hash,
                 created_at=now,
                 updated_at=now,
@@ -175,6 +189,7 @@ class FixtureBroker:
     def _benchmark(
         self,
         *,
+        node_id: str,
         generation: str,
         profile_hash: str,
         throughput: float,
@@ -183,6 +198,7 @@ class FixtureBroker:
     ) -> dict[str, Any]:
         return {
             "environmentFingerprint": "sha256:fixture",
+            "nodeId": node_id,
             "workloadId": "agent-tools",
             "servedModel": "fixture/model",
             "generation": generation,
@@ -229,7 +245,20 @@ class FixtureBroker:
             "cpu": {"logicalCores": 20},
             "memory": {"totalBytes": 129_922_760_704},
             "clusterNodes": [
-                {"id": "nixos-s6", "role": "head", "rank": 0, "healthy": True}
+                {
+                    "id": "nixos-s2",
+                    "role": "head",
+                    "rank": 0,
+                    "experimentRole": "baseline",
+                    "healthy": True,
+                },
+                {
+                    "id": "nixos-s4",
+                    "role": "worker",
+                    "rank": 1,
+                    "experimentRole": "canary",
+                    "healthy": True,
+                },
             ],
             "vllmVersion": "0.25.1",
             "servedModel": "fixture/model",
@@ -267,6 +296,8 @@ class FixtureBroker:
                     "nullable": True,
                 },
             },
+            "baselineNodes": ["nixos-s2"],
+            "experimentTargets": ["nixos-s4"],
         }
 
 
