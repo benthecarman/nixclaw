@@ -262,11 +262,6 @@ class KnowledgeStore(AbstractContextManager["KnowledgeStore"]):
         ranked.sort(key=lambda item: (item[0], item[1].confidence), reverse=True)
         return [item[1] for item in ranked[:limit]]
 
-    def latest_peak_memory_ratio(self, environment: dict[str, Any]) -> float | None:
-        # The shared v1 result intentionally exposes only a critical-pressure
-        # boolean, not a memory ratio from which to calculate a safe increment.
-        return None
-
     def list_experiments(self) -> list[dict[str, Any]]:
         rows = self.connection.execute(
             """

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -35,9 +35,6 @@ class ErrorEnvelope(ApiModel):
     schema_version: str = "1"
     request_id: UUID
     error: ErrorDetail
-
-
-DataT = TypeVar("DataT")
 
 
 class Envelope(ApiModel):
@@ -167,14 +164,6 @@ class ExperimentState(StrEnum):
     REJECTED = "rejected"
     ROLLED_BACK = "rolledBack"
     FAILED = "failed"
-
-
-TERMINAL_EXPERIMENT_STATES = {
-    ExperimentState.ACCEPTED,
-    ExperimentState.REJECTED,
-    ExperimentState.ROLLED_BACK,
-    ExperimentState.FAILED,
-}
 
 
 class Experiment(ApiModel):

@@ -84,22 +84,6 @@ class CandidateGenerator:
                     )
                 )
 
-        peak_memory = store.latest_peak_memory_ratio(environment)
-        if peak_memory is not None and peak_memory < 0.85 and "gpuMemoryUtilization" in tunables:
-            field = tunables["gpuMemoryUtilization"]
-            current = float(active.get("gpuMemoryUtilization", 0.76))
-            step = float(field.step or 0.01)
-            maximum = float(field.maximum or 0.95)
-            target = min(maximum, round(current + step, 4))
-            if target > current:
-                proposed.append(
-                    Candidate(
-                        patch=VllmProfilePatch(gpu_memory_utilization=target),
-                        hypothesis="Unused GPU memory may support a larger cache without pressure.",
-                        source="heuristic:memory-utilization",
-                    )
-                )
-
         if "enforceEager" in tunables and active.get("enforceEager", False):
             proposed.append(
                 Candidate(

@@ -12,22 +12,24 @@ from nixclaw.models import ExperimentState
 SCHEMA_ROOT = Path(__file__).parents[1] / "schemas" / "nixclaw" / "v1"
 
 
+def _load_schemas() -> tuple[dict[str, dict], Registry]:
+    schemas = {
+        path.name: json.loads(path.read_text()) for path in SCHEMA_ROOT.glob("*.schema.json")
+    }
+    resources = [(schema["$id"], Resource.from_contents(schema)) for schema in schemas.values()]
+    return schemas, Registry().with_resources(resources)
+
+
 def test_all_json_schemas_are_valid() -> None:
     schemas = list(SCHEMA_ROOT.glob("*.schema.json"))
     assert schemas
     for schema_path in schemas:
-        schema = __import__("json").loads(schema_path.read_text())
+        schema = json.loads(schema_path.read_text())
         validator_for(schema).check_schema(schema)
 
 
 def test_fixture_facts_and_config_match_canonical_schemas() -> None:
-    resources = []
-    schemas = {}
-    for schema_path in SCHEMA_ROOT.glob("*.schema.json"):
-        schema = json.loads(schema_path.read_text())
-        schemas[schema_path.name] = schema
-        resources.append((schema["$id"], Resource.from_contents(schema)))
-    registry = Registry().with_resources(resources)
+    schemas, registry = _load_schemas()
     fixture = FixtureBroker()
     for route, schema_name in (
         ("/v1/facts", "facts-response.schema.json"),
@@ -42,13 +44,7 @@ def test_fixture_facts_and_config_match_canonical_schemas() -> None:
 
 
 def test_fixture_experiment_matches_canonical_schema() -> None:
-    schemas = {}
-    resources = []
-    for schema_path in SCHEMA_ROOT.glob("*.schema.json"):
-        schema = json.loads(schema_path.read_text())
-        schemas[schema_path.name] = schema
-        resources.append((schema["$id"], Resource.from_contents(schema)))
-    registry = Registry().with_resources(resources)
+    schemas, registry = _load_schemas()
     fixture = FixtureBroker()
     created = fixture.handle(
         httpx.Request(
